@@ -3,6 +3,7 @@ import path from 'node:path'
 import { BrowserWindow } from 'electron'
 import type { DB } from '../db/connection'
 import { getSettings, saveSettings } from './settings'
+import { RECEIPT_TOKENS, stripReceiptTokens } from './receipt'
 import type { PrinterInfo, PrinterTestResult, Settings } from '@shared/types'
 
 /**
@@ -81,8 +82,12 @@ async function printText(db: DB, text: string, kickDrawer = false): Promise<Prin
       options: { timeout: 4000 }
     })
     printer.alignCenter()
-    for (const line of text.split('\n')) {
-      printer.println(line)
+    for (const raw of text.split('\n')) {
+      if (raw.includes(RECEIPT_TOKENS.largeOn)) printer.setTextSize(1, 1)
+      if (raw.includes(RECEIPT_TOKENS.boldOn)) printer.bold(true)
+      printer.println(stripReceiptTokens(raw))
+      if (raw.includes(RECEIPT_TOKENS.boldOff)) printer.bold(false)
+      if (raw.includes(RECEIPT_TOKENS.largeOff)) printer.setTextNormal()
     }
     printer.cut()
     if (kickDrawer && settings.autoDrawerKick) printer.openCashDrawer()
@@ -99,7 +104,7 @@ function spoolJob(text: string, reason: string): PrinterTestResult {
   const spoolDir = spoolDirectory()
   fs.mkdirSync(spoolDir, { recursive: true })
   const file = path.join(spoolDir, `job-${Date.now()}.txt`)
-  fs.writeFileSync(file, text, 'utf8')
+  fs.writeFileSync(file, stripReceiptTokens(text), 'utf8')
   return { ok: false, message: `${reason} — job saved to ${file}` }
 }
 
@@ -138,10 +143,16 @@ function escapeHtml(value: string): string {
 
 function receiptPageHtml(text: string, widthMm: 58 | 80): string {
   const fontSize = widthMm === 58 ? 9.5 : 11
+  const body = escapeHtml(text)
+    .replaceAll(RECEIPT_TOKENS.largeOn, '<span class="big">')
+    .replaceAll(RECEIPT_TOKENS.largeOff, '</span>')
+    .replaceAll(RECEIPT_TOKENS.boldOn, '<strong>')
+    .replaceAll(RECEIPT_TOKENS.boldOff, '</strong>')
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 html, body { margin: 0; padding: 0; background: #fff; }
-pre { margin: 0; padding: 0; font-family: 'Courier New', ui-monospace, monospace; font-size: ${fontSize}px; line-height: 1.35; white-space: pre; color: #000; }
-</style></head><body><pre>${escapeHtml(text)}</pre></body></html>`
+pre { margin: 0; padding: 0; font-family: 'Courier New', ui-monospace, monospace; font-size: ${fontSize}px; line-height: 1.35; white-space: pre; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.big { display: inline-block; width: 100%; text-align: center; font-size: 1.7em; font-weight: 800; line-height: 1.1; margin-bottom: -0.2em; vertical-align: bottom; }
+</style></head><body><pre>${body}</pre></body></html>`
 }
 
 /**
