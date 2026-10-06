@@ -22,6 +22,7 @@ import type {
   OpenShift,
   ShiftCloseResult,
   User,
+  PrinterInfo,
   PrinterTestResult,
   XReport,
   WastageEntry,
@@ -96,6 +97,7 @@ const api = {
   },
   printer: {
     status: () => invoke<PrinterTestResult>('api:printer:status'),
+    printers: () => invoke<PrinterInfo[]>('api:printer:printers'),
     test: () => invoke<PrinterTestResult>('api:printer:test'),
     kickDrawer: () => invoke<PrinterTestResult>('api:printer:kickDrawer'),
     receipt: (p: { receiptText: string }) => invoke<PrinterTestResult>('api:printer:receipt', p),

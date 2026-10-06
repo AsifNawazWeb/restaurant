@@ -123,7 +123,7 @@ export default function App() {
             </button>
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-background">
           {screen === 'dashboard' && <DashboardScreen />}
           {screen === 'pos' && <PosScreen />}
           {screen === 'menu' && <MenuScreen />}

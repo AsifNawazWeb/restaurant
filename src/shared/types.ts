@@ -272,6 +272,7 @@ export interface Settings {
   quickDiscounts: number[]
   printerType: string
   printerTarget: string
+  defaultPrinterName: string
   paperWidthMm: 58 | 80
   autoDrawerKick: boolean
   uiScale: number
@@ -289,6 +290,12 @@ export interface User {
 export interface PrinterTestResult {
   ok: boolean
   message: string
+}
+
+export interface PrinterInfo {
+  name: string
+  displayName: string
+  isDefault: boolean
 }
 
 /** ---------- License ---------- */

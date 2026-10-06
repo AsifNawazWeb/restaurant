@@ -10,16 +10,16 @@ interface TabsProps {
 
 export function Tabs({ tabs, active, onChange, className }: TabsProps) {
   return (
-    <div className={cn('inline-flex items-center gap-1 rounded-xl border border-border bg-surface-2 p-1', className)}>
+    <div className={cn('flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface p-1.5 shadow-sm', className)}>
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-3 h-7 text-[12px] font-medium transition-all',
+            'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-[13px] font-semibold transition',
             active === t.id
-              ? 'bg-surface text-foreground shadow-sm'
-              : 'text-foreground-muted hover:text-foreground'
+              ? 'bg-primary text-primary-fg shadow-sm'
+              : 'text-foreground-secondary hover:bg-surface-2 hover:text-foreground'
           )}
         >
           {t.icon}

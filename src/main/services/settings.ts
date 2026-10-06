@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
   quickDiscounts: [5, 10, 15],
   printerType: 'network',
   printerTarget: '192.168.1.87',
+  defaultPrinterName: '',
   paperWidthMm: 80,
   autoDrawerKick: true,
   uiScale: 1.25

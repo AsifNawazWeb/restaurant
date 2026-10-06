@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Save,
   Printer,
@@ -16,26 +16,29 @@ import {
   AlertTriangle,
   CalendarClock,
   BadgeCheck,
-  ShieldCheck
+  ShieldCheck,
+  Building2,
+  Percent
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, unwrap } from '@/lib/api'
-import type { LicenseStatus, Settings, User } from '@shared/types'
+import type { LicenseStatus, PrinterInfo, Settings, User } from '@shared/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { Tabs } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { useUi } from '@/stores/ui'
 
 const SECTIONS = [
-  { id: 'profile', label: 'Business Profile' },
-  { id: 'hardware', label: 'Hardware & Printers' },
-  { id: 'display', label: 'Display' },
-  { id: 'taxes', label: 'Taxes & Discounts' },
-  { id: 'users', label: 'Security & Users' },
-  { id: 'license', label: 'License' }
+  { id: 'profile', label: 'Business Profile', icon: <Building2 size={15} /> },
+  { id: 'hardware', label: 'Hardware & Printers', icon: <Printer size={15} /> },
+  { id: 'display', label: 'Display', icon: <Monitor size={15} /> },
+  { id: 'taxes', label: 'Taxes & Discounts', icon: <Percent size={15} /> },
+  { id: 'users', label: 'Security & Users', icon: <UsersIcon size={15} /> },
+  { id: 'license', label: 'License', icon: <KeyRound size={15} /> }
 ]
 
 export function SettingsScreen() {
@@ -49,25 +52,9 @@ export function SettingsScreen() {
   if (!settings) return null
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="w-[200px] shrink-0 border-r border-border bg-surface/50 p-3">
-        <h1 className="mb-3 px-2 text-[15px] font-bold tracking-tight">Settings</h1>
-        <div className="space-y-0.5">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSection(s.id)}
-              className={cn(
-                'flex w-full items-center rounded-lg px-3 py-2 text-left text-[12.5px] font-medium transition-colors',
-                section === s.id ? 'bg-primary-soft text-primary' : 'text-foreground-secondary hover:bg-surface-2'
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="min-w-0 flex-1 overflow-y-auto p-5">
+    <div className="flex flex-col gap-4 p-4">
+      <Tabs tabs={SECTIONS} active={section} onChange={setSection} />
+      <div className="min-w-0">
         {section === 'profile' && <ProfileSection settings={settings} onSaved={setSettings} />}
         {section === 'hardware' && <HardwareSection settings={settings} onSaved={setSettings} />}
         {section === 'display' && <DisplaySection settings={settings} onSaved={setSettings} />}
@@ -134,13 +121,30 @@ function ProfileSection({ settings, onSaved }: { settings: Settings; onSaved: (s
 function HardwareSection({ settings, onSaved }: { settings: Settings; onSaved: (s: Settings) => void }) {
   const [form, setForm] = useState(settings)
   const [status, setStatus] = useState<string>('')
+  const [printers, setPrinters] = useState<PrinterInfo[]>([])
+  const [loadingPrinters, setLoadingPrinters] = useState(false)
+
+  const loadPrinters = useCallback(async () => {
+    setLoadingPrinters(true)
+    try {
+      setPrinters(await unwrap(api.printer.printers()))
+    } catch {
+      setPrinters([])
+    } finally {
+      setLoadingPrinters(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadPrinters()
+  }, [loadPrinters])
 
   return (
     <div className="grid max-w-3xl grid-cols-2 gap-4">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-1.5">
-            <Printer size={13} /> ESC/POS Thermal Printer
+            <Printer size={13} /> Receipt Printer
           </CardTitle>
           <Button
             size="sm"
@@ -162,15 +166,42 @@ function HardwareSection({ settings, onSaved }: { settings: Settings; onSaved: (
               onChange={(e) => setForm({ ...form, printerType: e.target.value })}
               className="h-9 w-full rounded-lg border border-border bg-surface px-2 text-[13px]"
             >
+              <option value="system">System printer (OS driver)</option>
               <option value="network">LAN / TCP (IP)</option>
               <option value="usb">USB</option>
               <option value="serial">Serial / COM</option>
               <option value="file">File spool (dev)</option>
             </select>
           </FieldWide>
-          <FieldWide label="Target (IP / device path / COM port)">
-            <Input value={form.printerTarget} onChange={(e) => setForm({ ...form, printerTarget: e.target.value })} placeholder="192.168.1.87 or /dev/usb/lp0" />
-          </FieldWide>
+          {form.printerType === 'system' ? (
+            <FieldWide label="Default printer">
+              <div className="flex gap-2">
+                <select
+                  value={form.defaultPrinterName}
+                  onChange={(e) => setForm({ ...form, defaultPrinterName: e.target.value })}
+                  className="h-9 w-full rounded-lg border border-border bg-surface px-2 text-[13px]"
+                >
+                  <option value="">System default printer</option>
+                  {printers.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.displayName}
+                      {p.isDefault ? ' (default)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <Button size="sm" variant="secondary" onClick={loadPrinters} disabled={loadingPrinters} title="Refresh printer list">
+                  <RefreshCw size={13} />
+                </Button>
+              </div>
+              <p className="mt-1 text-[11px] text-foreground-muted">
+                Receipts print silently through the OS driver. Cash drawer kick needs an ESC/POS connection.
+              </p>
+            </FieldWide>
+          ) : (
+            <FieldWide label="Target (IP / device path / COM port)">
+              <Input value={form.printerTarget} onChange={(e) => setForm({ ...form, printerTarget: e.target.value })} placeholder="192.168.1.87 or /dev/usb/lp0" />
+            </FieldWide>
+          )}
           <FieldWide label="Paper width">
             <div className="flex gap-2">
               {([58, 80] as const).map((w) => (
@@ -203,7 +234,11 @@ function HardwareSection({ settings, onSaved }: { settings: Settings; onSaved: (
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
             <span className="text-[12.5px]">Auto-kick drawer on cash payment</span>
-            <Switch checked={form.autoDrawerKick} onCheckedChange={(v) => setForm({ ...form, autoDrawerKick: v })} />
+            <Switch
+              checked={form.autoDrawerKick}
+              disabled={form.printerType === 'system'}
+              onCheckedChange={(v) => setForm({ ...form, autoDrawerKick: v })}
+            />
           </div>
           <Button
             size="sm"

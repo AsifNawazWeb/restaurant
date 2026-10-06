@@ -131,7 +131,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     'settings:save': (d, _u, patch: unknown) => settingsSvc.saveSettings(d, patch as never),
 
     // printer
-    'printer:status': (d) => printerSvc.getPrinterStatus(d),
+    'printer:status': (d) => printerSvc.getPrinterStatus(d, getWindow()),
+    'printer:printers': () => printerSvc.getSystemPrinters(getWindow()),
     'printer:test': (d) => printerSvc.testPrint(d),
     'printer:kickDrawer': (d) => printerSvc.testDrawerKick(d),
     'printer:receipt': (d, _u, p: { receiptText: string }) => printerSvc.printReceipt(d, p.receiptText),

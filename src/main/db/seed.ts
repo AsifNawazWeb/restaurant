@@ -37,6 +37,7 @@ export async function seedIfEmpty(db: DB): Promise<void> {
     quickDiscounts: '5,10,15',
     printerType: 'network',
     printerTarget: '192.168.1.87',
+    defaultPrinterName: '',
     paperWidthMm: '80',
     autoDrawerKick: '1'
   }
